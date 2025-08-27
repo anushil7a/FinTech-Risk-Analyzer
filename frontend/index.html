@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated for debugging -->
+    <!-- Refreshed with new features -->
+    <!-- Fixed tab data loading and transaction display -->
+    <!-- Added clickable transaction rows with detailed analysis -->
+    <!-- Added automatic transaction saving and viewing -->
+    <!-- Added better transaction refresh and debugging -->
+    <!-- Fixed transaction data structure handling -->
+    <!-- Added pagination and better transaction browsing -->
+    <!-- Enhanced transaction saving and viewing -->
+    <title>FinTech Risk Analyzer</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-bg: #2c3e50;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px;
+            overflow: hidden;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        .header-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header-section p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .nav-tabs {
+            border: none;
+            background: var(--light-bg);
+            padding: 0 20px;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--primary-color);
+            font-weight: 600;
+            padding: 15px 25px;
+            margin: 0 5px;
+            border-radius: 10px 10px 0 0;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--secondary-color);
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: var(--secondary-color);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        
+        .tab-content {
+            padding: 30px;
+            background: white;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        
+        .risk-score-display {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .risk-score-display #riskScore {
+            font-size: 4rem;
+            font-weight: 700;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .risk-score-display #riskLevel {
+            font-size: 1.5rem;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .risk-low { background: var(--success-color); }
+        .risk-medium { background: var(--warning-color); }
+        .risk-high { background: var(--danger-color); }
+        
+        .progress {
+            height: 25px;
+            border-radius: 15px;
+            background: #e9ecef;
+        }
+        
+        .progress-bar {
+            border-radius: 15px;
+            font-weight: 600;
+            line-height: 25px;
+        }
+        
+        .btn {
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .stats-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card .label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .explanation-box {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            min-height: 80px;
+            transition: all 0.3s ease;
+        }
+        
+        .explanation-box:hover {
+            border-color: var(--secondary-color);
+            background: #e3f2fd;
+        }
+        
+        .explanation-box h6 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .explanation-item {
+            background: white;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-left: 4px solid var(--secondary-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+        }
+        
+        .badge {
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+        
+        .transaction-row:hover {
+            background-color: rgba(52, 152, 219, 0.1) !important;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        
+        .transaction-row {
+            transition: all 0.2s ease;
+        }
+        
+        .new-transaction {
+            background-color: rgba(40, 167, 69, 0.1) !important;
+            border-left: 4px solid #28a745;
+            animation: highlightNew 2s ease-in-out;
+        }
+        
+        @keyframes highlightNew {
+            0% { background-color: rgba(40, 167, 69, 0.3); }
+            100% { background-color: rgba(40, 167, 69, 0.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="container">
+                <h1><i class="fas fa-shield-alt me-3"></i>FinTech Risk Analyzer</h1>
+                <p>Advanced AI-Powered Financial Transaction Risk Assessment</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze" type="button" role="tab">
+                    <i class="fas fa-search me-2"></i>Risk Analysis
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab">
+                    <i class="fas fa-list me-2"></i>Transactions
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+                    <i class="fas fa-chart-line me-2"></i>Insights
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabContent">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+                <div class="row mb-3">
+                    <div class="col-12 text-end">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadDashboardData()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh Dashboard
+                        </button>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="number" id="totalTransactions">0</div>
+                            <div class="label">Total Transactions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="number" id="avgRiskScore">0%</div>
+                            <div class="label">Average Risk Score</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="number" id="highRiskCount">0</div>
+                            <div class="label">High Risk Transactions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="number" id="fraudRate">0%</div>
+                            <div class="label">Fraud Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Risk Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="riskDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Risk Trends</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="riskTrendsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Analysis Tab -->
+            <div class="tab-pane fade" id="analyze" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-search me-2"></i>Transaction Risk Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="riskAnalysisForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="amount" class="form-label">Transaction Amount ($)</label>
+                                                <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="merchant" class="form-label">Merchant</label>
+                                                <select class="form-control" id="merchant" name="merchant" required>
+                                                    <option value="">Select Merchant</option>
+                                                    <option value="Amazon">Amazon</option>
+                                                    <option value="Walmart">Walmart</option>
+                                                    <option value="Starbucks">Starbucks</option>
+                                                    <option value="LuxuryHotel">Luxury Hotel</option>
+                                                    <option value="GasStation">Gas Station</option>
+                                                    <option value="OnlineGaming">Online Gaming</option>
+                                                    <option value="Pharmacy">Pharmacy</option>
+                                                    <option value="Restaurant">Restaurant</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="deviceType" class="form-label">Device Type</label>
+                                                <select class="form-control" id="deviceType" name="deviceType" required>
+                                                    <option value="">Select Device</option>
+                                                    <option value="web-chrome">Web Browser (Chrome)</option>
+                                                    <option value="web-firefox">Web Browser (Firefox)</option>
+                                                    <option value="mobile-ios">Mobile iOS</option>
+                                                    <option value="mobile-android">Mobile Android</option>
+                                                    <option value="tablet">Tablet</option>
+                                                    <option value="pos-terminal">POS Terminal</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="timestamp" class="form-label">Transaction Time</label>
+                                                <input type="datetime-local" class="form-control" id="timestamp" name="timestamp">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="latitude" class="form-label">Latitude</label>
+                                                <input type="number" class="form-control" id="latitude" name="latitude" step="0.0001" value="40.7128">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="longitude" class="form-label">Longitude</label>
+                                                <input type="number" class="form-control" id="longitude" name="longitude" step="0.0001" value="-74.0060">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-search me-2"></i>Analyze Risk
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-lg ms-2" onclick="fillSampleData()">
+                                            <i class="fas fa-magic me-2"></i>Fill Sample Data
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Analysis Results -->
+                <div class="row mt-4" id="resultsSection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Risk Analysis Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="risk-score-display" id="riskScoreDisplay">
+                                            <div class="text-muted">Risk Score</div>
+                                            <div id="riskScore">0</div>
+                                            <div id="riskLevel" class="mt-2">Low</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>ML Prediction</h6>
+                                                <div class="progress mb-3">
+                                                    <div class="progress-bar" id="mlPredictionBar" role="progressbar" style="width: 0%"></div>
+                                                </div>
+                                                <small class="text-muted" id="mlPredictionText">0%</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Rule-based Score</h6>
+                                                <div class="progress mb-3">
+                                                    <div class="progress-bar bg-info" id="ruleBasedBar" role="progressbar" style="width: 0%"></div>
+                                                </div>
+                                                <small class="text-muted" id="ruleBasedText">0%</small>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <h6>Risk Factors</h6>
+                                                <div id="riskFactors"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mt-3">
+                                            <div class="col-12 text-center">
+                                                <button type="button" class="btn btn-outline-primary" onclick="viewInTransactions()">
+                                                    <i class="fas fa-list me-2"></i>View in Transactions Tab
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Detailed Explanations -->
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="explanation-box">
+                                                    <h6><i class="fas fa-robot me-2"></i>ML Model Reasoning</h6>
+                                                    <div id="mlReasons">
+                                                        <em>ML reasoning will appear here...</em>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="explanation-box">
+                                                    <h6><i class="fas fa-cogs me-2"></i>Rule-based Reasoning</h6>
+                                                    <div id="ruleReasons">
+                                                        <em>Rule-based reasoning will appear here...</em>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="explanation-box">
+                                                    <h6><i class="fas fa-chart-pie me-2"></i>Final Decision Breakdown</h6>
+                                                    <div id="finalReasoning">
+                                                        <em>Final decision breakdown will appear here...</em>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade" id="transactions" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Transactions</h5>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary me-2" id="transactionCount">0</span>
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="viewLatestTransactions()">
+                                    <i class="fas fa-clock me-1"></i>View Latest
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="loadTransactions()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Transaction Controls -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="perPageSelect" class="form-label">Transactions per page:</label>
+                                <select class="form-select form-select-sm" id="perPageSelect" onchange="changePerPage()" style="width: auto;">
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                    <option value="500">500</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="text-muted" id="paginationInfo">Showing 0 of 0 transactions</span>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Amount</th>
+                                        <th>Merchant</th>
+                                        <th>Device</th>
+                                        <th>Risk Score</th>
+                                        <th>Risk Level</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">Loading transactions...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <button class="btn btn-outline-primary btn-sm" onclick="previousPage()" id="prevBtn" disabled>
+                                    <i class="fas fa-chevron-left me-1"></i>Previous
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="text-muted me-3">Page</span>
+                                <input type="number" class="form-control form-control-sm" id="pageInput" style="width: 80px;" min="1" value="1">
+                                <span class="text-muted ms-2">of <span id="totalPages">0</span></span>
+                                <button class="btn btn-outline-primary btn-sm ms-2" onclick="goToPage()">Go</button>
+                            </div>
+                            <div>
+                                <button class="btn btn-outline-primary btn-sm" onclick="nextPage()" id="nextBtn">
+                                    <i class="fas fa-chevron-right me-1"></i>Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Tab -->
+            <div class="tab-pane fade" id="insights" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Risk Patterns</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="riskPatterns">
+                                    <p class="text-muted">Risk pattern analysis will appear here...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Time Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="timeAnalysis">
+                                    <p class="text-muted">Time-based risk analysis will appear here...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Analyzing transaction...</p>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
+    <!-- Transaction Details Modal -->
+    <div class="modal fade" id="transactionModal" tabindex="-1" aria-labelledby="transactionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="transactionModalLabel">
+                        <i class="fas fa-search me-2"></i>Transaction Analysis Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle me-2"></i>Transaction Info</h6>
+                            <div id="transactionInfo"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-pie me-2"></i>Risk Analysis</h6>
+                            <div id="transactionRiskAnalysis"></div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-robot me-2"></i>ML Model Reasoning</h6>
+                            <div id="modalMlReasons" class="explanation-box"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-cogs me-2"></i>Rule-based Reasoning</h6>
+                            <div id="modalRuleReasons" class="explanation-box"></div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6><i class="fas fa-chart-pie me-2"></i>Final Decision Breakdown</h6>
+                            <div id="modalFinalReasoning" class="explanation-box"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="reanalyzeTransaction()">Re-analyze</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
