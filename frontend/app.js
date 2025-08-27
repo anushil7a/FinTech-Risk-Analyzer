@@ -61,7 +61,10 @@ function initializeTabs() {
     });
     
     // Also load data when page first loads (for dashboard tab)
-    loadDashboardData();
+    // Add a small delay to ensure charts are initialized
+    setTimeout(() => {
+        loadDashboardData();
+    }, 100);
 }
 
 /**
@@ -302,9 +305,10 @@ async function loadDashboardData() {
         }
         
         // Load recent transactions for charts
-        const transactionsResponse = await fetch(`${API_BASE_URL}/transactions?per_page=100`);
+        const transactionsResponse = await fetch(`${API_BASE_URL}/transactions?per_page=1000`);
         if (transactionsResponse.ok) {
             const transactions = await transactionsResponse.json();
+            console.log('📊 Loaded', transactions.transactions.length, 'transactions for charts');
             updateCharts(transactions.transactions);
         }
         
@@ -320,15 +324,32 @@ async function loadDashboardData() {
 function updateDashboardStats(summary) {
     console.log('📈 Updating dashboard stats:', summary);
     
+    // Extract data from the nested structure
+    const stats = summary.overall_stats || summary;
+    
     const totalTransactions = document.getElementById('totalTransactions');
     const avgRiskScore = document.getElementById('avgRiskScore');
     const highRiskCount = document.getElementById('highRiskCount');
     const fraudRate = document.getElementById('fraudRate');
     
-    if (totalTransactions) totalTransactions.textContent = summary.total_transactions?.toLocaleString() || '0';
-    if (avgRiskScore) avgRiskScore.textContent = Math.round((summary.average_risk_score || 0) * 100) + '%';
-    if (highRiskCount) highRiskCount.textContent = summary.high_risk_count?.toLocaleString() || '0';
-    if (fraudRate) fraudRate.textContent = (summary.fraud_rate || 0).toFixed(2) + '%';
+    if (totalTransactions) totalTransactions.textContent = stats.total_transactions?.toLocaleString() || '0';
+    
+    // Calculate average risk score from risk counts
+    if (avgRiskScore && stats.total_transactions) {
+        const totalRisk = (stats.high_risk_count * 0.8) + (stats.medium_risk_count * 0.5) + (stats.low_risk_count * 0.2);
+        const avgRisk = totalRisk / stats.total_transactions;
+        avgRiskScore.textContent = Math.round(avgRisk * 100) + '%';
+    }
+    
+    if (highRiskCount) highRiskCount.textContent = stats.high_risk_count?.toLocaleString() || '0';
+    if (fraudRate) fraudRate.textContent = (stats.fraud_rate || 0).toFixed(2) + '%';
+    
+    console.log('📈 Updated dashboard with:', {
+        total: stats.total_transactions,
+        avgRisk: 'calculated from risk counts',
+        highRisk: stats.high_risk_count,
+        fraudRate: stats.fraud_rate
+    });
 }
 
 /**
@@ -547,9 +568,11 @@ function updateTimeAnalysis(transactions) {
  */
 function initializeCharts() {
     console.log('📊 Initializing charts...');
+    console.log('📊 Chart.js available:', typeof Chart !== 'undefined');
     
     // Risk Distribution Chart
     const riskCtx = document.getElementById('riskDistributionChart');
+    console.log('📊 Risk distribution canvas:', riskCtx);
     if (riskCtx) {
         riskDistributionChart = new Chart(riskCtx, {
             type: 'doughnut',
@@ -576,6 +599,7 @@ function initializeCharts() {
     
     // Risk Trends Chart
     const trendsCtx = document.getElementById('riskTrendsChart');
+    console.log('📊 Risk trends canvas:', trendsCtx);
     if (trendsCtx) {
         riskTrendsChart = new Chart(trendsCtx, {
             type: 'line',
@@ -609,11 +633,16 @@ function initializeCharts() {
 function updateCharts(transactions) {
     if (!transactions || transactions.length === 0) return;
     
+    console.log('📊 Updating charts with', transactions.length, 'transactions');
+    
     // Update risk distribution chart
     if (riskDistributionChart) {
-        const lowRisk = transactions.filter(tx => tx.risk_level === 'low').length;
-        const mediumRisk = transactions.filter(tx => tx.risk_level === 'medium').length;
-        const highRisk = transactions.filter(tx => tx.risk_level === 'high').length;
+        // Calculate risk levels from risk_score (0-100 scale)
+        const lowRisk = transactions.filter(tx => (tx.risk_score || 0) < 30).length;
+        const mediumRisk = transactions.filter(tx => (tx.risk_score || 0) >= 30 && (tx.risk_score || 0) < 70).length;
+        const highRisk = transactions.filter(tx => (tx.risk_score || 0) >= 70).length;
+        
+        console.log('📊 Risk distribution:', { lowRisk, mediumRisk, highRisk });
         
         riskDistributionChart.data.datasets[0].data = [lowRisk, mediumRisk, highRisk];
         riskDistributionChart.update();
@@ -627,15 +656,20 @@ function updateCharts(transactions) {
             if (tx.timestamp) {
                 const hour = new Date(tx.timestamp).getHours();
                 if (!hourlyRisk[hour]) hourlyRisk[hour] = [];
-                hourlyRisk[hour].push(tx.final_score || 0);
+                // Use risk_score (0-100) and convert to 0-1 scale for consistency
+                const normalizedScore = (tx.risk_score || 0) / 100;
+                hourlyRisk[hour].push(normalizedScore);
             }
         });
         
         const labels = Object.keys(hourlyRisk).sort((a, b) => parseInt(a) - parseInt(b));
         const data = labels.map(hour => {
             const scores = hourlyRisk[hour];
-            return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100);
+            const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+            return Math.round(avgScore * 100);
         });
+        
+        console.log('📊 Risk trends:', { labels, data });
         
         riskTrendsChart.data.labels = labels.map(hour => `${hour}:00`);
         riskTrendsChart.data.datasets[0].data = data;
