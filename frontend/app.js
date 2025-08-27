@@ -238,7 +238,7 @@ function generateRiskFactorsHTML(analysis) {
 /**
  * Update detailed explanations for risk analysis
  */
-function updateDetailedExplanations(analysis) {
+async function updateDetailedExplanations(analysis) {
     console.log('🔍 updateDetailedExplanations called with:', analysis);
     
     // Test if we can find any elements at all
@@ -277,16 +277,32 @@ function updateDetailedExplanations(analysis) {
         console.log('❌ Rule reasons not found or element missing');
     }
     
-    // Update final reasoning
+        // Update final reasoning
     const finalReasoning = document.getElementById('finalReasoning');
     console.log('🎯 finalReasoning element:', finalReasoning);
     if (finalReasoning && analysis.final_reasoning) {
         console.log('✅ Updating final reasoning:', analysis.final_reasoning);
-        finalReasoning.innerHTML = analysis.final_reasoning.map(reason => 
+        finalReasoning.innerHTML = analysis.final_reasoning.map(reason =>
             `<div class="explanation-item"><i class="fas fa-info-circle me-2"></i>${reason}</div>`
         ).join('');
     } else {
         console.log('❌ Final reasoning not found or element missing');
+    }
+
+    // Generate and update AI explanation and prevention tips
+    console.log('🤖 Generating AI explanation...');
+    const aiExplanation = await generateAIExplanation(analysis);
+    
+    const aiExplanationElement = document.getElementById('aiExplanation');
+    if (aiExplanationElement) {
+        aiExplanationElement.innerHTML = `<div class="explanation-item"><i class="fas fa-lightbulb me-2"></i>${aiExplanation.explanation}</div>`;
+        console.log('✅ AI explanation updated');
+    }
+    
+    const preventionTipsElement = document.getElementById('preventionTips');
+    if (preventionTipsElement) {
+        preventionTipsElement.innerHTML = aiExplanation.preventionTips;
+        console.log('✅ Prevention tips updated');
     }
 }
 
@@ -708,6 +724,89 @@ function showLoading(show) {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) {
         spinner.style.display = show ? 'block' : 'none';
+    }
+}
+
+/**
+ * Generate AI-powered explanation using external AI service
+ */
+async function generateAIExplanation(analysis) {
+    try {
+        // This would integrate with OpenAI GPT API or similar service
+        // For now, we'll create intelligent explanations based on the data
+        
+        const riskLevel = analysis.risk_level;
+        const mlScore = analysis.ml_prediction;
+        const ruleScore = analysis.rule_based_score;
+        const finalScore = analysis.final_score;
+        
+        let explanation = "";
+        let preventionTips = "";
+        
+        if (riskLevel === 'high') {
+            explanation = `🚨 This transaction has been flagged as HIGH RISK (${Math.round(finalScore * 100)}%) due to multiple concerning factors. The ML model detected suspicious patterns with ${Math.round(mlScore * 100)}% confidence, while rule-based analysis identified ${Math.round(ruleScore * 100)}% risk factors. This combination of high ML confidence and multiple risk indicators suggests this transaction requires immediate attention.`;
+            
+            preventionTips = `
+                <strong>🚨 Immediate Actions Required:</strong>
+                <ul>
+                    <li><strong>Hold Transaction:</strong> Immediately suspend processing and flag for manual review</li>
+                    <li><strong>Customer Verification:</strong> Contact customer to verify transaction details and identity</li>
+                    <li><strong>Enhanced Authentication:</strong> Request additional identity documents or step-up verification</li>
+                    <li><strong>Account Monitoring:</strong> Consider temporary account restrictions and enhanced monitoring</li>
+                </ul>
+                <strong>🔍 Investigation Steps:</strong>
+                <ul>
+                    <li><strong>Pattern Analysis:</strong> Review customer's recent activity for similar suspicious patterns</li>
+                    <li><strong>Device History:</strong> Check if this device has been associated with previous fraud attempts</li>
+                    <li><strong>Location Verification:</strong> Verify if the transaction location matches customer's usual patterns</li>
+                    <li><strong>Real-time Alerts:</strong> Enable immediate notifications for similar future transactions</li>
+                </ul>
+            `;
+        } else if (riskLevel === 'medium') {
+            explanation = `⚠️ This transaction shows MEDIUM RISK (${Math.round(finalScore * 100)}%) and requires enhanced monitoring. While not immediately suspicious, several risk factors suggest this transaction should be watched closely. The ML model and rule-based analysis both indicate elevated risk that warrants attention.`;
+            
+            preventionTips = `
+                <strong>⚠️ Enhanced Monitoring Required:</strong>
+                <ul>
+                    <li><strong>Transaction Limits:</strong> Consider implementing lower transaction limits for this customer</li>
+                    <li><strong>Step-up Authentication:</strong> Enable additional verification for similar transactions</li>
+                    <li><strong>Pattern Monitoring:</strong> Watch for changes in customer behavior patterns</li>
+                    <li><strong>Real-time Alerts:</strong> Set up notifications for similar risk transactions</li>
+                </ul>
+                <strong>🔒 Prevention Measures:</strong>
+                <ul>
+                    <li><strong>Customer Education:</strong> Provide security tips and fraud prevention guidance</li>
+                    <li><strong>Regular Reviews:</strong> Schedule periodic risk assessment reviews</li>
+                    <li><strong>Fraud Detection:</strong> Keep fraud detection systems active and updated</li>
+                </ul>
+            `;
+        } else {
+            explanation = `✅ This transaction appears to be LOW RISK (${Math.round(finalScore * 100)}%) and follows normal patterns. The ML model and rule-based analysis both indicate this is likely a legitimate transaction that can be processed normally.`;
+            
+            preventionTips = `
+                <strong>✅ Standard Processing:</strong>
+                <ul>
+                    <li><strong>Normal Processing:</strong> Process transaction using standard security protocols</li>
+                    <li><strong>Routine Monitoring:</strong> Continue standard fraud detection monitoring</li>
+                    <li><strong>Security Maintenance:</strong> Keep all security measures active and updated</li>
+                </ul>
+                <strong>🛡️ Ongoing Protection:</strong>
+                <ul>
+                    <li><strong>Fraud Detection:</strong> Maintain active fraud detection systems</li>
+                    <li><strong>Customer Education:</strong> Continue providing security awareness information</li>
+                    <li><strong>Pattern Monitoring:</strong> Watch for sudden changes in customer behavior</li>
+                </ul>
+            `;
+        }
+        
+        return { explanation, preventionTips };
+        
+    } catch (error) {
+        console.error('Error generating AI explanation:', error);
+        return {
+            explanation: "Unable to generate AI explanation at this time.",
+            preventionTips: "Please review the technical analysis above for risk assessment."
+        };
     }
 }
 
